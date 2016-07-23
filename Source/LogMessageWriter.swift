@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import os.log
 
 /// The LogMessageWriter protocol defines a single API for writing a log message. The message can be written in any way
 /// the conforming object sees fit. For example, it could write to the console, write to a file, remote log to a third
@@ -54,5 +55,38 @@ public class ConsoleWriter: LogMessageWriter {
         modifiers?.forEach { mutableMessage = $0.modifyMessage(mutableMessage, with: logLevel) }
 
         print(mutableMessage)
+    }
+}
+
+@available(iOS 10.0, OSX 10.12.0, tvOS 10.0, watchOS 3.0, *)
+public class OSLogWriter: LogMessageWriter {
+    public let subsystem: String
+    public let category: String
+    private let log: os_log_t!
+
+    public init(subsystem: String, category: String) {
+        self.subsystem = subsystem
+        self.category = category
+        self.log = os_log_create("subsystem-name", "category")
+    }
+
+    public func writeMessage(_ message: String, logLevel: LogLevel, modifiers: [LogMessageModifier]?) {
+        var mutableMessage = message
+        modifiers?.forEach { mutableMessage = $0.modifyMessage(mutableMessage, with: logLevel) }
+
+        switch logLevel {
+        case LogLevel.debug:
+            os_log_debug(log, mutableMessage)
+        case LogLevel.info:
+            os_log_info(log, mutableMessage)
+        case LogLevel.event:
+            os_log(log, mutableMessage)
+        case LogLevel.warn:
+            os_log_error(log, mutableMessage)
+        case LogLevel.error:
+            os_log_error(log, mutableMessage)
+        default:
+            os_log(log, mutableMessage)
+        }
     }
 }
